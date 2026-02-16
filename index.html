@@ -3,100 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MilkMan Realtime App</title>
+    <title>MilkMan App - Final Working</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <style>
-        :root { --primary: #1a237e; --accent: #007bff; --success: #2e7d32; }
-        body { font-family: sans-serif; background: #f0f2f5; padding: 15px; display: flex; justify-content: center; }
-        .container { background: white; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; margin-top: 10px; }
-        .btn-admin { background: var(--primary); }
-        .btn-grahak { background: var(--accent); }
-        .bill-card { background: #e8f5e9; border-left: 5px solid var(--success); padding: 15px; border-radius: 10px; margin-top: 15px; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; text-align: center; }
+        .box { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); max-width: 380px; margin: auto; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; margin-top: 10px; font-size: 16px; }
+        .btn-blue { background: #007bff; }
+        .btn-dark { background: #1a237e; }
+        .btn-red { background: #dc3545; }
+        .card { background: #fff; padding: 20px; border-radius: 12px; margin-top: 15px; border-left: 6px solid #28a745; text-align: left; }
+        .price-tag { color: #28a745; font-size: 26px; font-weight: bold; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="login-section">
-        <h2 style="text-align: center;">🥛 MilkMan Login</h2>
-        <input type="text" id="userName" placeholder="Apna Naam (eg: Rahul)">
-        <input type="password" id="userPass" placeholder="Password / 1234">
-        <button class="btn btn-grahak" onclick="login()">Kholein</button>
+<div class="box">
+    <div id="login-sec">
+        <h2>🥛 MilkMan App</h2>
+        <input type="text" id="uName" placeholder="Grahak ka Naam">
+        <input type="password" id="uPass" placeholder="Password (1234 / milk123)">
+        <button class="btn btn-blue" onclick="handleLogin()">Login Karein</button>
     </div>
 
-    <div id="admin-panel" class="hidden">
-        <h3>👨‍🌾 Admin Entry</h3>
-        <input type="text" id="targetCust" placeholder="Grahak ka Naam">
-        <input type="number" id="ltr" placeholder="Liters">
-        <button class="btn btn-admin" onclick="sendToFirebase()">Entry Save Karein</button>
+    <div id="admin-sec" class="hidden">
+        <h3>👨‍🌾 Admin Panel</h3>
+        <input type="text" id="cust" placeholder="Grahak ka Naam">
+        <input type="number" id="milkLtr" step="0.01" placeholder="Liters">
+        <input type="number" id="milkPrice" value="65" placeholder="Bhao">
+        <button class="btn btn-dark" onclick="saveData()">✅ Bill Update Karein</button>
+       
         <button class="btn" style="background:#888" onclick="location.reload()">Logout</button>
     </div>
 
-    <div id="grahak-portal" class="hidden">
-        <h3>📊 Aapka Daily Bill</h3>
-        <div id="display">Upar niche check karein...</div>
-        <button class="btn" style="background:#888" onclick="location.reload()">Logout</button>
+    <div id="grahak-sec" class="hidden">
+        <h3>📊 Aapka Aaj ka Bill</h3>
+        <div id="output">Bill load ho raha hai...</div>
+        <button id="clearBtnGrahak" class="btn btn-red hidden" onclick="grahakSelfClear()">🗑️ Data Clear Karein</button>
+        <button class="btn" style="background:#888; margin-top:20px" onclick="location.reload()">Logout</button>
     </div>
 </div>
 
 <script>
-    // 1. APNA CONFIG YAHAN PASTE KAREIN
     const firebaseConfig = {
-        // YAHAN APNA WOH CODE PASTE KAREIN JO FIREBASE SE MILA THA
+        apiKey: "AIzaSyCH41Q-FsOLioyoAWjoAWjoAWjoAWjo", 
+        authDomain: "milkman-app-65561.firebaseapp.com",
+        projectId: "milkman-app-65561",
+        storageBucket: "milkman-app-65561.appspot.com",
+        messagingSenderId: "341531555178",
+        appId: "1:341531555178:web:78da8138980323330e2586",
+        databaseURL: "https://milkman-app-65561-default-rtdb.firebaseio.com/" 
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+    const db = firebase.database();
+    let loggedInUser = ""; // Grahak ka naam yaad rakhne ke liye
 
-    function login() {
-        let n = document.getElementById('userName').value.trim();
-        let p = document.getElementById('userPass').value;
-        if (p === "milk123") { document.getElementById('login-section').classList.add('hidden'); document.getElementById('admin-panel').classList.remove('hidden'); }
-        else if (p === "1234" && n !== "") { fetchBill(n); }
+    function handleLogin() {
+        let name = document.getElementById('uName').value.trim().toLowerCase();
+        let pass = document.getElementById('uPass').value;
+        if (pass === "milk123") {
+            document.getElementById('login-sec').classList.add('hidden');
+            document.getElementById('admin-sec').classList.remove('hidden');
+        } else if (pass === "1234" && name !== "") {
+            loggedInUser = name; // Naam save kar liya
+            document.getElementById('login-sec').classList.add('hidden');
+            document.getElementById('grahak-sec').classList.remove('hidden');
+            showGrahakData(name);
+        } else { alert("Galti: Details check karein!"); }
     }
 
-    function sendToFirebase() {
-        let name = document.getElementById('targetCust').value.trim().toLowerCase();
-        let liter = document.getElementById('ltr').value;
-        if(!name || !liter) return alert("Pura bhariye!");
-
-        firebase.database().ref('users/' + name).set({
-            ltr: liter,
-            date: new Date().toLocaleDateString(),
-            total: (liter * 65).toFixed(2)
-        });
-        alert("✅ Data Internet par Save ho gaya!");
+    // GRAHAK KA KHUD KA CLEAR FUNCTION
+    function grahakSelfClear() {
+        if(confirm("Kya aap apna aaj ka data delete karna chahte hain?")) {
+            db.ref('entries/' + loggedInUser).remove()
+            .then(() => {
+                alert("🗑️ Aapka data saaf ho gaya!");
+            })
+            .catch(err => alert("Galti: " + err.message));
+        }
     }
 
-    function fetchBill(name) {
-        firebase.database().ref('users/' + name.toLowerCase()).on('value', (snap) => {
-            let data = snap.val();
-            document.getElementById('login-section').classList.add('hidden');
-            document.getElementById('grahak-portal').classList.remove('hidden');
-            let box = document.getElementById('display');
-
-if(data) {
-                box.innerHTML = <div class="bill-card"><h3>Hi ${name}!</h3><p>Dudh: ${data.ltr}L</p><p>Total: ₹${data.total}</p><small>${data.date}</small></div>;
+    function showGrahakData(name) {
+        db.ref('entries/' + name).on('value', (snap) => {
+            const data = snap.val();
+            const out = document.getElementById('output');
+            const cBtn = document.getElementById('clearBtnGrahak');
+            if (data) {
+                cBtn.classList.remove('hidden'); // Data hai toh button dikhao
+                out.innerHTML = `
+                <div class="card">
+                    <p>👤 <b>Naam:</b> ${name.toUpperCase()}</p>
+                    <p>🥛 <b>Dudh:</b> ${data.liters} Ltr</p>
+                    <p>💰 <b>Bhao:</b> ₹${data.rate}/Ltr</p>
+                    <hr style="border:0; border-top:1px solid #eee">
+                    <p>💵 <b>Total Bill:</b></p>
+                    <div class="price-tag">₹${data.total}</div>
+                    <p><small style="color:#888">📅 Update: ${data.date}</small></p>
+                </div>`;
             } else {
-                box.innerHTML = "Koi data nahi mila.";
+                cBtn.classList.add('hidden'); // Data nahi hai toh button chhupao
+                out.innerHTML = "<p>Abhi aapka koi bill nahi hai.</p>";
             }
         });
     }
 
-{
-  "rules": {
-    ".read": true,
-    ".write": true
-  }
-}
-    
-    
+    // ADMIN FUNCTIONS
+    function saveData() {
+        let cName = document.getElementById('cust').value.trim().toLowerCase();
+        let ltr = parseFloat(document.getElementById('milkLtr').value);
+        let rate = parseFloat(document.getElementById('milkPrice').value);
+        if(!cName || isNaN(ltr)) return alert("Naam aur Liter bhariye!");
+
+        db.ref('entries/' + cName).set({
+            liters: ltr,
+            rate: rate,
+            total: (ltr * rate).toFixed(2),
+            date: new Date().toLocaleTimeString() + " | " + new Date().toLocaleDateString()
+        }).then(() => alert("✅ Bill Save Ho Gaya!"));
+    }
+
+    function adminClear() {
+        let cName = document.getElementById('cust').value.trim().toLowerCase();
+        if(!cName) return alert("Pehle upar naam likhein!");
+        db.ref('entries/' + cName).remove().then(() => alert("🗑️ Delete successful!"));
+    }
 </script>
 </body>
 </html>
-    
