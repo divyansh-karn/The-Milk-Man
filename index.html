@@ -3,143 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MilkMan Billing System</title>
+    <title>MilkMan Realtime App</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <style>
-        :root { --primary: #1a237e; --accent: #007bff; --danger: #e91e63; --success: #2e7d32; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; margin: 0; padding: 15px; display: flex; justify-content: center; }
-        
-        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-        
-        h2 { text-align: center; color: #333; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        
-        .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 10px; }
-        .btn-admin { background: var(--primary); color: white; }
-        .btn-grahak { background: var(--accent); color: white; }
-        .btn-clear { background: var(--danger); color: white; margin-top: 20px; padding: 10px; font-size: 14px; }
-        
-        /* Table Styling */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
-        th { background: #f4f4f4; }
-        
-        .bill-summary { background: #e8f5e9; border-left: 5px solid var(--success); padding: 15px; border-radius: 12px; margin-top: 20px; }
+        :root { --primary: #1a237e; --accent: #007bff; --success: #2e7d32; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 15px; display: flex; justify-content: center; }
+        .container { background: white; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; margin-top: 10px; }
+        .btn-admin { background: var(--primary); }
+        .btn-grahak { background: var(--accent); }
+        .bill-card { background: #e8f5e9; border-left: 5px solid var(--success); padding: 15px; border-radius: 10px; margin-top: 15px; }
         .hidden { display: none; }
-        .total-amt { font-size: 22px; color: var(--success); font-weight: bold; }
-        .footer { text-align: center; font-size: 12px; color: #999; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div id="login-page">
-            <h2>🥛 MilkMan Billing</h2>
-            <input type="text" id="userName" placeholder="Apna Naam (eg: Rahul)">
-            <input type="password" id="userPass" placeholder="Password ( / 1234)">
-            <button class="btn btn-grahak" onclick="login()">Login Karein</button>
-            <p class="footer">| Grahak: 1234</p>
-        </div>
-
-        <div id="admin-panel" class="hidden">
-            <h2 style="color: var(--primary)">⚙️ Admin Billing</h2>
-            <input type="text" id="custName" placeholder="Grahak ka Naam">
-            <input type="number" id="ltr" step="0.1" placeholder="Kitna Liter?">
-            <input type="number" id="rate" value="65" placeholder="Bhao (Price)">
-            
-            <button class="btn btn-admin" onclick="updateBill()">✅ Entry Save Karein</button>
-            
-            <button class="btn" style="background:#ddd" onclick="location.reload()">Logout</button>
-        </div>
-
-        <div id="grahak-page" class="hidden">
-            <h2 style="color: var(--accent)">📊 Mera Billing Hisab</h2>
-            <div id="bill-view">
-                </div>
-            <button class="btn" style="background:#ddd; margin-top:20px" onclick="location.reload()">Logout</button>
-        </div>
+<div class="container">
+    <div id="login-section">
+        <h2 style="text-align: center;">🥛 MilkMan Login</h2>
+        <input type="text" id="userName" placeholder="Apna Naam (eg: Rahul)">
+        <input type="password" id="userPass" placeholder="Password (milk123 / 1234)">
+        <button class="btn btn-grahak" onclick="login()">Kholein</button>
     </div>
 
-    <script>
-        function login() {
-            let name = document.getElementById('userName').value.trim();
-            let pass = document.getElementById('userPass').value;
+    <div id="admin-panel" class="hidden">
+        <h3>👨‍🌾 Admin Entry</h3>
+        <input type="text" id="targetCust" placeholder="Grahak ka Naam">
+        <input type="number" id="ltr" placeholder="Liters">
+        <button class="btn btn-admin" onclick="sendToFirebase()">Entry Save Karein</button>
+        <button class="btn" style="background:#888" onclick="location.reload()">Logout</button>
+    </div>
 
-            if (pass === "milk123") {
-                show('admin-panel');
-            } else if (pass === "1234" && name !== "") {
-                show('grahak-page');
-                loadBill(name);
+    <div id="grahak-portal" class="hidden">
+        <h3>📊 Aapka Daily Bill</h3>
+        <div id="display">Upar niche check karein...</div>
+        <button class="btn" style="background:#888" onclick="location.reload()">Logout</button>
+    </div>
+</div>
+
+<script>
+    // 1. APNA CONFIG YAHAN PASTE KAREIN
+    const firebaseConfig = {
+        // YAHAN APNA WOH CODE PASTE KAREIN JO FIREBASE SE MILA THA
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    function login() {
+        let n = document.getElementById('userName').value.trim();
+        let p = document.getElementById('userPass').value;
+        if (p === "milk123") { document.getElementById('login-section').classList.add('hidden'); document.getElementById('admin-panel').classList.remove('hidden'); }
+        else if (p === "1234" && n !== "") { fetchBill(n); }
+    }
+
+    function sendToFirebase() {
+        let name = document.getElementById('targetCust').value.trim().toLowerCase();
+        let liter = document.getElementById('ltr').value;
+        if(!name || !liter) return alert("Pura bhariye!");
+
+        firebase.database().ref('users/' + name).set({
+            ltr: liter,
+            date: new Date().toLocaleDateString(),
+            total: (liter * 65).toFixed(2)
+        });
+        alert("✅ Data Internet par Save ho gaya!");
+    }
+
+    function fetchBill(name) {
+        firebase.database().ref('users/' + name.toLowerCase()).on('value', (snap) => {
+            let data = snap.val();
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('grahak-portal').classList.remove('hidden');
+            let box = document.getElementById('display');
+
+if(data) {
+                box.innerHTML = <div class="bill-card"><h3>Hi ${name}!</h3><p>Dudh: ${data.ltr}L</p><p>Total: ₹${data.total}</p><small>${data.date}</small></div>;
             } else {
-                alert("Sahi password ya naam dalein!");
+                box.innerHTML = "Koi data nahi mila.";
             }
-        }
-
-        function show(id) {
-            document.getElementById('login-page').classList.add('hidden');
-            document.getElementById(id).classList.remove('hidden');
-        }
-
-        function updateBill() {
-            let name = document.getElementById('custName').value.trim().toLowerCase();
-            let ltr = parseFloat(document.getElementById('ltr').value);
-            let price = parseFloat(document.getElementById('rate').value);
-            
-            if(!name || isNaN(ltr)) return alert("Naam aur Liter sahi bhariye!");
-
-            let date = new Date().toLocaleDateString();
-            let amount = (ltr * price).toFixed(2);
-
-            // Purani history nikalna ya naya array banana
-            let history = JSON.parse(localStorage.getItem('billing_' + name)) || [];
-            
-            // Nayi entry jodna
-            history.push({ date, ltr, price, amount });
-            
-            localStorage.setItem('billing_' + name, JSON.stringify(history));
-            alert(`✅ ${name} ke liye entry save ho gayi!`);
-            
-            document.getElementById('ltr').value = "";
-        }
-
-        function loadBill(name) {
-            let history = JSON.parse(localStorage.getItem('billing_' + name.toLowerCase())) || [];
-            let view = document.getElementById('bill-view');
-
-            if (history.length > 0) {
-                let rows = "";
-                let totalBill = 0;
-                let totalLtr = 0;
-
-                history.forEach(item => {
-                    rows += `<tr><td>${item.date}</td><td>${item.ltr}L</td><td>₹${item.amount}</td></tr>`;
-                    totalBill += parseFloat(item.amount);
-                    totalLtr += parseFloat(item.ltr);
-                });
-
-                view.innerHTML = `
-                    <div class="bill-summary">
-                        <strong>👤 Grahak: ${name.toUpperCase()}</strong><br>
-                        <span>Total Dudh: ${totalLtr.toFixed(1)} L</span><br>
-                <button class="btn btn-clear" onclick="clearData()">🗑️ Clear All Billing Data</button>
-                        <span class="total-amt">Kul Bill: ₹${totalBill.toFixed(2)}</span>
-                    </div>
-                    <table>
-                        <thead><tr><th>Tarik</th><th>Dudh</th><th>Rupaye</th></tr></thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                `;
-            } else {
-                view.innerHTML = `<p style="text-align:center; padding:20px;">Abhi tak aapki koi billing history nahi hai.</p>`;
-            }
-        }
-
-        function clearData() {
-            if(confirm("Dhyan dein! Isse saare grahako ka data delete ho jayega. Continue?")) {
-                localStorage.clear();
-                alert("Saara data clear ho gaya!");
-                location.reload();
-            }
-        }
-    </script>
+        });
+    }
+</script>
 </body>
 </html>
+    
