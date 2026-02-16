@@ -13,6 +13,7 @@
         .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; margin-top: 10px; font-size: 16px; }
         .btn-blue { background: #007bff; }
         .btn-dark { background: #1a237e; }
+        .btn-green { background: #25d366; } /* WhatsApp Color */
         .btn-red { background: #dc3545; }
         .card { background: #fff; padding: 20px; border-radius: 12px; margin-top: 15px; border-left: 6px solid #28a745; text-align: left; }
         .price-tag { color: #28a745; font-size: 26px; font-weight: bold; }
@@ -32,9 +33,12 @@
     <div id="admin-sec" class="hidden">
         <h3>👨‍🌾 Admin Panel</h3>
         <input type="text" id="cust" placeholder="Grahak ka Naam">
+        <input type="number" id="custPhone" placeholder="WhatsApp No. (91 के साथ)">
         <input type="number" id="milkLtr" step="0.01" placeholder="Liters">
         <input type="number" id="milkPrice" value="65" placeholder="Bhao">
+        
         <button class="btn btn-dark" onclick="saveData()">✅ Bill Update Karein</button>
+        <button class="btn btn-green" onclick="shareOnWhatsApp()">📲 WhatsApp par Bhejein</button>
        
         <button class="btn" style="background:#888" onclick="location.reload()">Logout</button>
     </div>
@@ -48,6 +52,7 @@
 </div>
 
 <script>
+    // Firebase configuration same rahegi
     const firebaseConfig = {
         apiKey: "AIzaSyCH41Q-FsOLioyoAWjoAWjoAWjoAWjo", 
         authDomain: "milkman-app-65561.firebaseapp.com",
@@ -60,7 +65,7 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let loggedInUser = ""; // Grahak ka naam yaad rakhne ke liye
+    let loggedInUser = "";
 
     function handleLogin() {
         let name = document.getElementById('uName').value.trim().toLowerCase();
@@ -69,22 +74,11 @@
             document.getElementById('login-sec').classList.add('hidden');
             document.getElementById('admin-sec').classList.remove('hidden');
         } else if (pass === "1234" && name !== "") {
-            loggedInUser = name; // Naam save kar liya
+            loggedInUser = name;
             document.getElementById('login-sec').classList.add('hidden');
             document.getElementById('grahak-sec').classList.remove('hidden');
             showGrahakData(name);
         } else { alert("Galti: Details check karein!"); }
-    }
-
-    // GRAHAK KA KHUD KA CLEAR FUNCTION
-    function grahakSelfClear() {
-        if(confirm("Kya aap apna aaj ka data delete karna chahte hain?")) {
-            db.ref('entries/' + loggedInUser).remove()
-            .then(() => {
-                alert("🗑️ Aapka data saaf ho gaya!");
-            })
-            .catch(err => alert("Galti: " + err.message));
-        }
     }
 
     function showGrahakData(name) {
@@ -93,7 +87,7 @@
             const out = document.getElementById('output');
             const cBtn = document.getElementById('clearBtnGrahak');
             if (data) {
-                cBtn.classList.remove('hidden'); // Data hai toh button dikhao
+                cBtn.classList.remove('hidden');
                 out.innerHTML = `
                 <div class="card">
                     <p>👤 <b>Naam:</b> ${name.toUpperCase()}</p>
@@ -105,13 +99,14 @@
                     <p><small style="color:#888">📅 Update: ${data.date}</small></p>
                 </div>`;
             } else {
-                cBtn.classList.add('hidden'); // Data nahi hai toh button chhupao
+                cBtn.classList.add('hidden');
                 out.innerHTML = "<p>Abhi aapka koi bill nahi hai.</p>";
             }
         });
     }
 
-    // ADMIN FUNCTIONS
+    // --- ADMIN FUNCTIONS ---
+
     function saveData() {
         let cName = document.getElementById('cust').value.trim().toLowerCase();
         let ltr = parseFloat(document.getElementById('milkLtr').value);
@@ -126,10 +121,40 @@
         }).then(() => alert("✅ Bill Save Ho Gaya!"));
     }
 
-    function adminClear() {
-        let cName = document.getElementById('cust').value.trim().toLowerCase();
-        if(!cName) return alert("Pehle upar naam likhein!");
-        db.ref('entries/' + cName).remove().then(() => alert("🗑️ Delete successful!"));
+    // NAYA WHATSAPP SHARE FUNCTION
+    function shareOnWhatsApp() {
+        let cName = document.getElementById('cust').value.trim().toUpperCase();
+        let phone = document.getElementById('custPhone').value.trim();
+        let ltr = document.getElementById('milkLtr').value;
+        let rate = document.getElementById('milkPrice').value;
+        let total = (ltr * rate).toFixed(2);
+        let date = new Date().toLocaleDateString();
+
+        if(!cName || !phone || !ltr) return alert("Pehle details bharo (Naam, No, Liter)!");
+
+        // WhatsApp Message Format
+        let msg = `*🥛 MILK BILL UPDATE*%0A` +
+                  `--------------------------%0A` +
+                  `👤 *Grahak:* ${cName}%0A` +
+                  `📅 *Tarikh:* ${date}%0A` +
+                  `🥛 *Quantity:* ${ltr} Ltr%0A` +
+                  `💰 *Rate:* ₹${rate}/Ltr%0A` +
+                  `--------------------------%0A` +
+                  `💵 *Total Bill: ₹${total}*%0A` +
+                  `--------------------------%0A` +
+                  `Dhanyawad! 🙏`;
+
+        // WhatsApp URL (91 code ke saath)
+        let wpUrl = `https://wa.me/${phone}?text=${msg}`;
+        window.open(wpUrl, '_blank');
+    }
+
+    function grahakSelfClear() {
+        if(confirm("Kya aap apna aaj ka data delete karna chahte hain?")) {
+            db.ref('entries/' + loggedInUser).remove()
+            .then(() => alert("🗑️ Aapka data saaf ho gaya!"))
+            .catch(err => alert("Galti: " + err.message));
+        }
     }
 </script>
 </body>
