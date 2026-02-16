@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MilkMan App - Final Working</title>
+    <title>MilkMan App - Bill SMS</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <style>
@@ -13,8 +13,8 @@
         .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; margin-top: 10px; font-size: 16px; }
         .btn-blue { background: #007bff; }
         .btn-dark { background: #1a237e; }
-        .btn-green { background: #25d366; } /* WhatsApp Color */
         .btn-red { background: #dc3545; }
+        .btn-orange { background: #ff9800; } /* SMS ke liye orange button */
         .card { background: #fff; padding: 20px; border-radius: 12px; margin-top: 15px; border-left: 6px solid #28a745; text-align: left; }
         .price-tag { color: #28a745; font-size: 26px; font-weight: bold; }
         .hidden { display: none; }
@@ -33,26 +33,24 @@
     <div id="admin-sec" class="hidden">
         <h3>👨‍🌾 Admin Panel</h3>
         <input type="text" id="cust" placeholder="Grahak ka Naam">
-        <input type="number" id="custPhone" placeholder="WhatsApp No. (91 के साथ)">
         <input type="number" id="milkLtr" step="0.01" placeholder="Liters">
         <input type="number" id="milkPrice" value="65" placeholder="Bhao">
-        
         <button class="btn btn-dark" onclick="saveData()">✅ Bill Update Karein</button>
-        <button class="btn btn-green" onclick="shareOnWhatsApp()">📲 WhatsApp par Bhejein</button>
-       
         <button class="btn" style="background:#888" onclick="location.reload()">Logout</button>
     </div>
 
     <div id="grahak-sec" class="hidden">
         <h3>📊 Aapka Aaj ka Bill</h3>
         <div id="output">Bill load ho raha hai...</div>
+        
+        <button id="smsBtn" class="btn btn-orange hidden" onclick="shareViaSMS()">✉️ Bill SMS Share Karein</button>
+        
         <button id="clearBtnGrahak" class="btn btn-red hidden" onclick="grahakSelfClear()">🗑️ Data Clear Karein</button>
         <button class="btn" style="background:#888; margin-top:20px" onclick="location.reload()">Logout</button>
     </div>
 </div>
 
 <script>
-    // Firebase configuration same rahegi
     const firebaseConfig = {
         apiKey: "AIzaSyCH41Q-FsOLioyoAWjoAWjoAWjoAWjo", 
         authDomain: "milkman-app-65561.firebaseapp.com",
@@ -66,6 +64,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let loggedInUser = "";
+    let currentData = null; // Share karne ke liye data store karenge
 
     function handleLogin() {
         let name = document.getElementById('uName').value.trim().toLowerCase();
@@ -84,10 +83,14 @@
     function showGrahakData(name) {
         db.ref('entries/' + name).on('value', (snap) => {
             const data = snap.val();
+            currentData = data;
             const out = document.getElementById('output');
             const cBtn = document.getElementById('clearBtnGrahak');
+            const sBtn = document.getElementById('smsBtn');
+
             if (data) {
                 cBtn.classList.remove('hidden');
+                sBtn.classList.remove('hidden');
                 out.innerHTML = `
                 <div class="card">
                     <p>👤 <b>Naam:</b> ${name.toUpperCase()}</p>
@@ -100,12 +103,26 @@
                 </div>`;
             } else {
                 cBtn.classList.add('hidden');
+                sBtn.classList.add('hidden');
                 out.innerHTML = "<p>Abhi aapka koi bill nahi hai.</p>";
             }
         });
     }
 
-    // --- ADMIN FUNCTIONS ---
+    // Grahak ke liye SMS Function
+    function shareViaSMS() {
+        if (!currentData) return;
+
+        let msg = `MILK BILL REPORT\n` +
+                  `Naam: ${loggedInUser.toUpperCase()}\n` +
+                  `Dudh: ${currentData.liters} Ltr\n` +
+                  `Bhao: Rs.${currentData.rate}\n` +
+                  `TOTAL: Rs.${currentData.total}\n` +
+                  `Time: ${currentData.date}`;
+
+        // SMS app open karega (Number empty chhoda hai taaki user kisi ko bhi select kar sake)
+        window.location.href = `sms:?body=${encodeURIComponent(msg)}`;
+    }
 
     function saveData() {
         let cName = document.getElementById('cust').value.trim().toLowerCase();
@@ -119,34 +136,6 @@
             total: (ltr * rate).toFixed(2),
             date: new Date().toLocaleTimeString() + " | " + new Date().toLocaleDateString()
         }).then(() => alert("✅ Bill Save Ho Gaya!"));
-    }
-
-    // NAYA WHATSAPP SHARE FUNCTION
-    function shareOnWhatsApp() {
-        let cName = document.getElementById('cust').value.trim().toUpperCase();
-        let phone = document.getElementById('custPhone').value.trim();
-        let ltr = document.getElementById('milkLtr').value;
-        let rate = document.getElementById('milkPrice').value;
-        let total = (ltr * rate).toFixed(2);
-        let date = new Date().toLocaleDateString();
-
-        if(!cName || !phone || !ltr) return alert("Pehle details bharo (Naam, No, Liter)!");
-
-        // WhatsApp Message Format
-        let msg = `*🥛 MILK BILL UPDATE*%0A` +
-                  `--------------------------%0A` +
-                  `👤 *Grahak:* ${cName}%0A` +
-                  `📅 *Tarikh:* ${date}%0A` +
-                  `🥛 *Quantity:* ${ltr} Ltr%0A` +
-                  `💰 *Rate:* ₹${rate}/Ltr%0A` +
-                  `--------------------------%0A` +
-                  `💵 *Total Bill: ₹${total}*%0A` +
-                  `--------------------------%0A` +
-                  `Dhanyawad! 🙏`;
-
-        // WhatsApp URL (91 code ke saath)
-        let wpUrl = `https://wa.me/${phone}?text=${msg}`;
-        window.open(wpUrl, '_blank');
     }
 
     function grahakSelfClear() {
